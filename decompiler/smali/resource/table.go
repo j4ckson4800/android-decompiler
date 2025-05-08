@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/j4ckson4800/android-decompiler/smali/resource/internal"
+	"github.com/j4ckson4800/android-decompiler/decompiler/smali/resource/internal"
 )
 
 type Table struct {

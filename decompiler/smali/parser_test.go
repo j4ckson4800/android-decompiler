@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/j4ckson4800/android-decompiler/smali"
-	"github.com/j4ckson4800/android-decompiler/smali/internal/defs"
+	"github.com/j4ckson4800/android-decompiler/decompiler/smali"
+	"github.com/j4ckson4800/android-decompiler/decompiler/smali/internal/defs"
 	"github.com/stretchr/testify/require"
 )
 

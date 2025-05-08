@@ -4,24 +4,26 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/j4ckson4800/android-decompiler/smali/internal"
+	"github.com/j4ckson4800/android-decompiler/decompiler/smali/internal"
 )
 
 type Method struct {
-	Class      string
-	Name       string
-	ReturnType string
+	Class              string
+	Name               string
+	ReturnType         string
+	ArgumentsSignature string
 
 	rawMethod internal.Method
 	Body      []Instruction
 }
 
-func NewMethod(cls, name, returnType string, m internal.Method) (Method, error) {
+func NewMethod(cls, name, returnType, argumentsSignature string, m internal.Method) (Method, error) {
 
 	return Method{
-		Class:      cls,
-		Name:       name,
-		ReturnType: returnType,
+		Class:              cls,
+		Name:               name,
+		ReturnType:         returnType,
+		ArgumentsSignature: argumentsSignature,
 
 		rawMethod: m,
 	}, nil

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/j4ckson4800/android-decompiler/smali/internal/defs"
+	"github.com/j4ckson4800/android-decompiler/decompiler/smali/internal/defs"
 )
 
 type defCreator[T any] func(p defs.Parser) (T, error)

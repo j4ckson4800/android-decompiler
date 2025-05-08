@@ -1,6 +1,7 @@
 package smali
 
 type Field struct {
+	DefIdx     int
 	Name       string
 	Type       string
 	ClassName  string

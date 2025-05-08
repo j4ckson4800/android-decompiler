@@ -3,7 +3,7 @@ package internal
 import (
 	"fmt"
 
-	"github.com/j4ckson4800/android-decompiler/smali/internal/defs"
+	"github.com/j4ckson4800/android-decompiler/decompiler/smali/internal/defs"
 )
 
 type Method struct {

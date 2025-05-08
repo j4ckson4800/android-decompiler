@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/j4ckson4800/android-decompiler/smali/resource/internal"
+	"github.com/j4ckson4800/android-decompiler/decompiler/smali/resource/internal"
 )
 
 type ResChunkFlag byte

@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/j4ckson4800/android-decompiler/smali"
-	"github.com/j4ckson4800/android-decompiler/smali/resource"
+	"github.com/j4ckson4800/android-decompiler/decompiler/smali"
+	"github.com/j4ckson4800/android-decompiler/decompiler/smali/resource"
 )
 
 var ErrApkNotFoundInXapk = errors.New("apk not found in xapk")
