@@ -1,5 +1,9 @@
 package defs
 
+import (
+	"fmt"
+)
+
 type codeItem struct {
 	RegisterSize uint16
 	InsSize      uint16
@@ -15,15 +19,15 @@ type CodeItem struct {
 	// NOTE: store exc handlers if we need it later
 }
 
-func NewCodeItem(r Parser) (CodeItem, error) {
+func NewCodeItem(p Parser) (CodeItem, error) {
 	code := codeItem{}
-	if err := r.ReadStruct(&code); err != nil {
-		return CodeItem{}, err
+	if err := p.ReadStruct(&code); err != nil {
+		return CodeItem{}, fmt.Errorf("read code item: %w", err)
 	}
 
-	data, err := r.ReadBytes(int64(code.InsnsSize * 2))
+	data, err := p.ReadBytes(int64(code.InsnsSize * 2))
 	if err != nil {
-		return CodeItem{}, err
+		return CodeItem{}, fmt.Errorf("read instructions: %w", err)
 	}
 
 	return CodeItem{

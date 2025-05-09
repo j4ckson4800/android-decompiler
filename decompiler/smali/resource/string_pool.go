@@ -40,21 +40,21 @@ func (s *StringPool) GetString(p internal.Parser, index uint32) (string, error) 
 		return "", fmt.Errorf("set cursor: %w", err)
 	}
 
-	l, err := p.ReadUint16()
+	lenValue, err := p.ReadUint16()
 	if err != nil {
 		return "", fmt.Errorf("read len: %w", err)
 	}
 
-	length := int(l) & 0xff
-	if l&0x8000 != 0 {
+	length := int(lenValue) & 0xff
+	if lenValue&0x8000 != 0 {
 		// skip long strings
 		return "", nil
 	}
 
 	if !s.rawPool.IsUTF8() {
 		out := make([]byte, 0, length)
-		for i := 0; i < length; i++ {
-			c, err := p.ReadByte()
+		for range length {
+			char, err := p.ReadByte()
 			if err != nil {
 				return "", fmt.Errorf("read byte: %w", err)
 			}
@@ -62,7 +62,7 @@ func (s *StringPool) GetString(p internal.Parser, index uint32) (string, error) 
 			if _, err := p.ReadByte(); err != nil {
 				return "", fmt.Errorf("read byte: %w", err)
 			}
-			out = append(out, c)
+			out = append(out, char)
 		}
 		return string(out), nil
 	}

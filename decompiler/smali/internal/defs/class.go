@@ -15,9 +15,9 @@ type ClassDef struct {
 	StaticValuesOffset uint32
 } // Size: 0x20
 
-func NewClassDef(r Parser) (ClassDef, error) {
+func NewClassDef(p Parser) (ClassDef, error) {
 	class := ClassDef{}
-	if err := r.ReadStruct(&class); err != nil {
+	if err := p.ReadStruct(&class); err != nil {
 		return ClassDef{}, fmt.Errorf("read struct: %w", err)
 	}
 

@@ -18,11 +18,11 @@ type DexHeader struct {
 	EndianTag  uint32   // 0x28
 	Links      Table    // 0x2c
 	MapOff     uint32   // 0x34
-	StringIds  Table    // 0x38
-	TypeIds    Table    // 0x40
-	ProtoIds   Table    // 0x48
-	FieldIds   Table    // 0x50
-	MethodIds  Table    // 0x58
+	StringIDs  Table    // 0x38
+	TypeIDs    Table    // 0x40
+	ProtoIDs   Table    // 0x48
+	FieldIDs   Table    // 0x50
+	MethodIDs  Table    // 0x58
 	ClassDefs  Table    // 0x60
 	Data       Table    // 0x68
 } // Size: 0x70
@@ -32,9 +32,9 @@ const BEConstant = 0x78563412
 const DexHeaderSize = 0x70
 const Magic = 0x0000000A786564
 
-func NewDexHeader(r Parser) (DexHeader, error) {
+func NewDexHeader(p Parser) (DexHeader, error) {
 	hdr := DexHeader{}
-	if err := r.ReadStruct(&hdr); err != nil {
+	if err := p.ReadStruct(&hdr); err != nil {
 		return DexHeader{}, fmt.Errorf("read struct: %w", err)
 	}
 

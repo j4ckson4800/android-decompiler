@@ -39,7 +39,7 @@ func (r *RawResTypeChunk) IsOffset16() bool {
 }
 
 type TypeEntryOffset struct {
-	Id     int
+	ID     int
 	Offset int32
 }
 
@@ -84,13 +84,13 @@ func NewResTypeChunk(p internal.Parser, chunkEnd int64) (ResTypeChunk, error) {
 
 	chunk.entryOffset = entriesOffset + int64(chunk.RawChunk.EntriesOffset)
 	chunk.Entries = make([]TypeEntryOffset, chunk.RawChunk.EntryCount)
-	for i := 0; i < int(chunk.RawChunk.EntryCount); i++ {
+	for i := range int(chunk.RawChunk.EntryCount) {
 		var offset int32
 		idx := i
 
 		if p.Pos() >= chunkEnd-uint16Size || offset >= int32(chunk.RawChunk.EntryCount) {
 			// TODO: make custom error type, and decide if this is even needed
-			return chunk, fmt.Errorf("invalid offset, probability of obfuscation: %d", offset)
+			return chunk, fmt.Errorf("invalid offset, probability of obfuscation: %d", offset) //nolint:err113 // I don't care rn
 		}
 
 		switch {
@@ -120,7 +120,7 @@ func NewResTypeChunk(p internal.Parser, chunkEnd int64) (ResTypeChunk, error) {
 		}
 
 		chunk.Entries[idx] = TypeEntryOffset{
-			Id:     idx,
+			ID:     idx,
 			Offset: offset,
 		}
 	}

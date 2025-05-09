@@ -8,12 +8,194 @@ import (
 	"io"
 )
 
+var (
+	ErrUnknownOperandType = errors.New("unknown operand type")
+	ErrULEB128Overflow    = errors.New("ULEB128 overflow")
+	ErrULEB128TooLong     = errors.New("ULEB128 too long")
+	ErrInvalidType        = errors.New("invalid type")
+)
+
 type parser struct {
 	r *bytes.Reader
 }
 
 func NewParser(r *bytes.Reader) *parser {
 	return &parser{r: r}
+}
+
+func (p *parser) ParseInstruction() (Instruction, error) {
+	rawOpcode, err := p.r.ReadByte()
+	if err != nil {
+		return Instruction{}, fmt.Errorf("read opcode: %w", err)
+	}
+
+	opcode := Opcode(rawOpcode)
+	operandType := getInstructionOperandsType(opcode)
+
+	operands, err := p.tryReadOperands(operandType)
+	if err != nil {
+		return Instruction{}, fmt.Errorf("read operands: %w", err)
+	}
+
+	return Instruction{
+		Opcode:      opcode,
+		Type:        getInstructionType(opcode),
+		Operands:    operands,
+		OperandType: operandType,
+	}, nil
+}
+
+func (p *parser) ReadULEB128() (uint64, error) {
+	var result uint64
+	var shift uint
+	const maxBytes = 10
+
+	for range maxBytes {
+		b, err := p.r.ReadByte()
+		if err != nil {
+			return 0, fmt.Errorf("read byte: %w", err)
+		}
+		if shift >= 64 && b != 0 {
+			return 0, ErrULEB128Overflow
+		}
+		if shift == 63 && b > 1 {
+			return 0, ErrULEB128Overflow
+		}
+
+		value := uint64(b & 0x7f)
+		if shift >= 64 {
+			if value != 0 {
+				return 0, ErrULEB128Overflow
+			}
+			return result, nil
+		}
+
+		result |= value << shift
+		if b&0x80 == 0 {
+			return result, nil
+		}
+
+		shift += 7
+	}
+
+	return 0, ErrULEB128TooLong
+}
+
+func (p *parser) ReadSLEB128() (int64, error) {
+	var result int64
+	var shift uint
+	var lastByte byte
+	const maxBytes = 10
+
+	for range maxBytes {
+		b, err := p.r.ReadByte()
+		if err != nil {
+			return 0, fmt.Errorf("read byte: %w", err)
+		}
+		if shift >= 64 && b != 0 {
+			return 0, ErrULEB128Overflow
+		}
+		if shift == 63 && b > 1 {
+			return 0, ErrULEB128Overflow
+		}
+		lastByte = b
+
+		result |= int64(b&0x7f) << shift
+		shift += 7
+
+		if b&0x80 == 0 {
+
+			if shift < 64 && lastByte&0x40 != 0 {
+				result |= -1 << shift
+			}
+
+			return result, nil
+		}
+	}
+
+	if shift < 64 && lastByte&0x40 != 0 {
+		result |= -1 << shift
+	}
+
+	return result, nil
+}
+
+func (p *parser) ReadBytes(n int64) ([]byte, error) {
+	buf := make([]byte, n)
+	if _, err := p.r.Read(buf); err != nil {
+		return nil, fmt.Errorf("read: %w", err)
+	}
+
+	return buf, nil
+}
+
+func (p *parser) ReadUint64() (uint64, error) {
+	buf := make([]byte, 8)
+	if _, err := p.r.Read(buf); err != nil {
+		return 0, fmt.Errorf("read: %w", err)
+	}
+
+	return binary.LittleEndian.Uint64(buf), nil
+}
+
+func (p *parser) ReadUint32() (uint32, error) {
+	buf := make([]byte, 4)
+	if _, err := p.r.Read(buf); err != nil {
+		return 0, fmt.Errorf("read: %w", err)
+	}
+
+	return binary.LittleEndian.Uint32(buf), nil
+}
+
+func (p *parser) ReadUint16() (uint16, error) {
+	buf := make([]byte, 2)
+	if _, err := p.r.Read(buf); err != nil {
+		return 0, fmt.Errorf("read: %w", err)
+	}
+
+	return binary.LittleEndian.Uint16(buf), nil
+}
+
+func (p *parser) ReadByte() (byte, error) {
+	b, err := p.r.ReadByte()
+	if err != nil {
+		return 0, fmt.Errorf("read: %w", err)
+	}
+
+	return b, nil
+}
+
+func (p *parser) Pos() int64 {
+	return p.r.Size() - int64(p.r.Len())
+}
+
+func (p *parser) SkipN(n int64) error {
+	if _, err := p.r.Seek(n, io.SeekCurrent); err != nil {
+		return fmt.Errorf("seek: %w", err)
+	}
+	return nil
+}
+
+func (p *parser) SetCursorTo(offset int64) error {
+	if _, err := p.r.Seek(offset, io.SeekStart); err != nil {
+		return fmt.Errorf("seek: %w", err)
+	}
+	return nil
+}
+
+func (p *parser) ReadStruct(out any) error {
+	if err := binary.Read(p.r, binary.LittleEndian, out); err != nil {
+		return fmt.Errorf("read: %w", err)
+	}
+	return nil
+}
+
+func (p *parser) HasMore() bool {
+	_, err := p.r.ReadByte()
+	if err == nil {
+		_ = p.r.UnreadByte()
+	}
+	return err == nil
 }
 
 func (p *parser) read2ShortRegs() ([]int64, error) {
@@ -131,7 +313,7 @@ func (p *parser) readRegisterRange() ([]int64, error) {
 		return nil, fmt.Errorf("read reg: %w", err)
 	}
 
-	typeId, err := p.readImm()
+	typeID, err := p.readImm()
 	if err != nil {
 		return nil, fmt.Errorf("read imm16: %w", err)
 	}
@@ -146,7 +328,7 @@ func (p *parser) readRegisterRange() ([]int64, error) {
 		regs[i] = firstReg + int64(i)
 	}
 
-	return append(regs, typeId), nil
+	return append(regs, typeID), nil
 }
 
 func (p *parser) readRegisterArray() ([]int64, error) {
@@ -155,10 +337,10 @@ func (p *parser) readRegisterArray() ([]int64, error) {
 		return nil, fmt.Errorf("read reg: %w", err)
 	}
 
-	g := count & 0x0f
+	gReg := count & 0x0f
 
 	count >>= 4
-	typeId, err := p.readImm()
+	typeID, err := p.readImm()
 	if err != nil {
 		return nil, fmt.Errorf("read imm16: %w", err)
 	}
@@ -173,7 +355,7 @@ func (p *parser) readRegisterArray() ([]int64, error) {
 			// even though len can be at most 7
 			// according to docs 5 is the max?
 			// ref(35c): https://source.android.com/docs/core/runtime/instruction-formats
-			regs[i] = int64(g)
+			regs[i] = int64(gReg)
 			break
 		}
 
@@ -181,7 +363,7 @@ func (p *parser) readRegisterArray() ([]int64, error) {
 		reg >>= 4
 	}
 
-	return append(regs, typeId), nil
+	return append(regs, typeID), nil
 }
 
 func (p *parser) readRegConstWide(size int) ([]int64, error) {
@@ -337,180 +519,5 @@ func (p *parser) tryReadOperands(opType OperandType) ([]int64, error) {
 		return operands, nil
 	}
 
-	return nil, errors.New("unknown operand type")
-}
-
-func (p *parser) ParseInstruction() (Instruction, error) {
-	rawOpcode, err := p.r.ReadByte()
-	if err != nil {
-		return Instruction{}, fmt.Errorf("read opcode: %w", err)
-	}
-
-	opcode := Opcode(rawOpcode)
-	operandType := getInstructionOperandsType(opcode)
-
-	operands, err := p.tryReadOperands(operandType)
-	if err != nil {
-		return Instruction{}, fmt.Errorf("read operands: %w", err)
-	}
-
-	return Instruction{
-		Opcode:      opcode,
-		Type:        getInstructionType(opcode),
-		Operands:    operands,
-		OperandType: operandType,
-	}, nil
-}
-
-func (p *parser) ReadULEB128() (uint64, error) {
-	var result uint64
-	var shift uint
-	const maxBytes = 10
-
-	for i := 0; i < maxBytes; i++ {
-		b, err := p.r.ReadByte()
-		if err != nil {
-			return 0, fmt.Errorf("read byte: %w", err)
-		}
-		if shift >= 64 && b != 0 {
-			return 0, errors.New("ULEB128 overflow")
-		}
-		if shift == 63 && b > 1 {
-			return 0, errors.New("ULEB128 overflow")
-		}
-
-		value := uint64(b & 0x7f)
-		if shift >= 64 {
-			if value != 0 {
-				return 0, errors.New("ULEB128 overflow")
-			}
-			return result, nil
-		}
-
-		result |= value << shift
-		if b&0x80 == 0 {
-			return result, nil
-		}
-
-		shift += 7
-	}
-
-	return 0, errors.New("ULEB128 too long")
-}
-
-func (p *parser) ReadSLEB128() (int64, error) {
-	var result int64
-	var shift uint
-	var lastByte byte
-	const maxBytes = 10
-
-	for i := 0; i < maxBytes; i++ {
-		b, err := p.r.ReadByte()
-		if err != nil {
-			return 0, fmt.Errorf("read byte: %w", err)
-		}
-		if shift >= 64 && b != 0 {
-			return 0, errors.New("ULEB128 overflow")
-		}
-		if shift == 63 && b > 1 {
-			return 0, errors.New("ULEB128 overflow")
-		}
-		lastByte = b
-
-		result |= int64(b&0x7f) << shift
-		shift += 7
-
-		if b&0x80 == 0 {
-
-			if shift < 64 && lastByte&0x40 != 0 {
-				result |= -1 << shift
-			}
-
-			return result, nil
-		}
-	}
-
-	if shift < 64 && lastByte&0x40 != 0 {
-		result |= -1 << shift
-	}
-
-	return result, nil
-}
-
-func (p *parser) ReadBytes(n int64) ([]byte, error) {
-	buf := make([]byte, n)
-	if _, err := p.r.Read(buf); err != nil {
-		return nil, fmt.Errorf("read: %w", err)
-	}
-
-	return buf, nil
-}
-
-func (p *parser) ReadUint64() (uint64, error) {
-	buf := make([]byte, 8)
-	if _, err := p.r.Read(buf); err != nil {
-		return 0, fmt.Errorf("read: %w", err)
-	}
-
-	return binary.LittleEndian.Uint64(buf), nil
-}
-
-func (p *parser) ReadUint32() (uint32, error) {
-	buf := make([]byte, 4)
-	if _, err := p.r.Read(buf); err != nil {
-		return 0, fmt.Errorf("read: %w", err)
-	}
-
-	return binary.LittleEndian.Uint32(buf), nil
-}
-
-func (p *parser) ReadUint16() (uint16, error) {
-	buf := make([]byte, 2)
-	if _, err := p.r.Read(buf); err != nil {
-		return 0, fmt.Errorf("read: %w", err)
-	}
-
-	return binary.LittleEndian.Uint16(buf), nil
-}
-
-func (p *parser) ReadByte() (byte, error) {
-	b, err := p.r.ReadByte()
-	if err != nil {
-		return 0, fmt.Errorf("read: %w", err)
-	}
-
-	return b, nil
-}
-
-func (p *parser) Pos() int64 {
-	return p.r.Size() - int64(p.r.Len())
-}
-
-func (p *parser) SkipN(n int64) error {
-	if _, err := p.r.Seek(n, io.SeekCurrent); err != nil {
-		return fmt.Errorf("seek: %w", err)
-	}
-	return nil
-}
-
-func (p *parser) SetCursorTo(offset int64) error {
-	if _, err := p.r.Seek(offset, io.SeekStart); err != nil {
-		return fmt.Errorf("seek: %w", err)
-	}
-	return nil
-}
-
-func (p *parser) ReadStruct(out any) error {
-	if err := binary.Read(p.r, binary.LittleEndian, out); err != nil {
-		return fmt.Errorf("read: %w", err)
-	}
-	return nil
-}
-
-func (p *parser) HasMore() bool {
-	_, err := p.r.ReadByte()
-	if err == nil {
-		_ = p.r.UnreadByte()
-	}
-	return err == nil
+	return nil, ErrUnknownOperandType
 }

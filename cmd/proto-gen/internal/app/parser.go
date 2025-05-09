@@ -13,7 +13,10 @@ import (
 )
 
 var (
-	ErrInvalidApkFile = errors.New("invalid APK file")
+	ErrInvalidApkFile         = errors.New("invalid APK file")
+	ErrPredefinedMessageClass = errors.New("predefined message class provided")
+	ErrInvalidSuperclass      = errors.New("invalid superclass provided")
+	ErrEmptyMessageClass      = errors.New("empty message class provided")
 )
 
 type codeGenerator interface {
@@ -55,6 +58,45 @@ func NewParser(apkFile string, generator codeGenerator) (*Parser, error) {
 	}, nil
 }
 
+func (p *Parser) Parse() error {
+	for _, dex := range p.apk.Dexes {
+		for _, cls := range dex.Classes {
+
+			msg, err := p.parseClass(cls)
+			if err != nil {
+				continue
+			}
+
+			packageName := p.getMessagePackageName(msg.Name)
+			packageParts := strings.Split(packageName, ".")
+			if _, ok := p.packages[packageName]; !ok {
+				p.packages[packageName] = &defs.ProtoPackage{
+					FileName:      packageParts[len(packageParts)-1],
+					PackageName:   packageName,
+					GoPackageName: strings.ReplaceAll(packageName, ".", "/"),
+					Messages:      make(map[string]*defs.ProtoMessage, 16),
+				}
+			}
+
+			p.packages[packageName].Messages[msg.Name] = msg
+		}
+	}
+
+	p.reorganizeAndFixPackages()
+	p.reorganizeFields()
+
+	return nil
+}
+
+func (p *Parser) GenerateProtoDefs() error {
+	for _, pkg := range p.packages {
+		if err := p.generator.WritePackage(pkg); err != nil {
+			return fmt.Errorf("write package: %w", err)
+		}
+	}
+	return nil
+}
+
 func (p *Parser) getMessagePackageName(typename string) string {
 	packageParts := strings.Split(typename, "/")
 	lastPart := packageParts[len(packageParts)-1]
@@ -74,15 +116,15 @@ func (p *Parser) getMessageName(typename string) string {
 
 func (p *Parser) parseClass(cls smali.Class) (*defs.ProtoMessage, error) {
 	if strings.HasPrefix(cls.Name, defs.ProtobufPackage) {
-		return nil, errors.New("predefined message class provided")
+		return nil, ErrPredefinedMessageClass
 	}
 
 	if !strings.HasPrefix(cls.SuperClass, defs.ProtobufPackage) {
-		return nil, errors.New("invalid superclass provided")
+		return nil, ErrInvalidSuperclass
 	}
 
 	if len(cls.StaticFields) < 2 {
-		return nil, errors.New("empty message class provided")
+		return nil, ErrEmptyMessageClass
 	}
 
 	msg := defs.ProtoMessage{
@@ -127,19 +169,19 @@ func (p *Parser) parseClass(cls smali.Class) (*defs.ProtoMessage, error) {
 
 func (p *Parser) makeSnakeCase(name string) string {
 	snakeCase := make([]rune, 0, len(name)+len(name)/2)
-	for _, r := range name {
+	for _, char := range name {
 
-		if r == '_' {
+		if char == '_' {
 			break
 		}
 
-		if r >= 'A' && r <= 'Z' {
+		if char >= 'A' && char <= 'Z' {
 			if len(snakeCase) > 0 {
 				snakeCase = append(snakeCase, '_')
 			}
-			snakeCase = append(snakeCase, r+32)
+			snakeCase = append(snakeCase, char+32)
 		} else {
-			snakeCase = append(snakeCase, r)
+			snakeCase = append(snakeCase, char)
 		}
 
 	}
@@ -186,33 +228,34 @@ func (p *Parser) fixOneofTypedFields(cls smali.Class, msg *defs.ProtoMessage) er
 
 		field := msg.Fields[fieldIdx]
 		for _, instr := range setter.Body {
-			if instr.Type == smali.TypeInstanceOp {
-				fieldNameIdx := instr.Operands[len(instr.Operands)-1]
-
-				clsFieldIdx := slices.IndexFunc(
-					cls.InstanceFields, func(clsField smali.Field) bool {
-						return clsField.DefIdx == int(fieldNameIdx)
-					},
-				)
-
-				if clsFieldIdx == -1 {
-					continue
-				}
-
-				clsField := cls.InstanceFields[clsFieldIdx]
-				if strings.HasSuffix(clsField.Name, "Case_") {
-					continue
-				}
-
-				if _, ok := oneOfs[clsFieldIdx]; !ok {
-					oneOfs[clsFieldIdx] = &defs.ProtoOneof{
-						Name: p.makeSnakeCase(clsField.Name),
-					}
-				}
-
-				field.Type = setter.ArgumentsSignature
-				oneOfs[clsFieldIdx].Fields = append(oneOfs[clsFieldIdx].Fields, field)
+			if instr.Type != smali.TypeInstanceOp {
+				continue
 			}
+			fieldNameIdx := instr.Operands[len(instr.Operands)-1]
+
+			clsFieldIdx := slices.IndexFunc(
+				cls.InstanceFields, func(clsField smali.Field) bool {
+					return clsField.DefIdx == int(fieldNameIdx)
+				},
+			)
+
+			if clsFieldIdx == -1 {
+				continue
+			}
+
+			clsField := cls.InstanceFields[clsFieldIdx]
+			if strings.HasSuffix(clsField.Name, "Case_") {
+				continue
+			}
+
+			if _, ok := oneOfs[clsFieldIdx]; !ok {
+				oneOfs[clsFieldIdx] = &defs.ProtoOneof{
+					Name: p.makeSnakeCase(clsField.Name),
+				}
+			}
+
+			field.Type = setter.ArgumentsSignature
+			oneOfs[clsFieldIdx].Fields = append(oneOfs[clsFieldIdx].Fields, field)
 		}
 	}
 
@@ -291,7 +334,7 @@ func (p *Parser) fixFieldTypes(pkg *defs.ProtoPackage, msg *defs.ProtoMessage, f
 			continue
 		}
 
-		if !(field.Type[0] == 'L' && field.Type[len(field.Type)-1] == ';') {
+		if field.Type[0] != 'L' || field.Type[len(field.Type)-1] != ';' {
 			continue
 		}
 		packageName := p.getMessagePackageName(field.Type)
@@ -374,43 +417,4 @@ func (p *Parser) reorganizeAndFixPackages() {
 		}
 		pkg.Messages = newPkgMessages
 	}
-}
-
-func (p *Parser) Parse() error {
-	for _, dex := range p.apk.Dexes {
-		for _, cls := range dex.Classes {
-
-			msg, err := p.parseClass(cls)
-			if err != nil {
-				continue
-			}
-
-			packageName := p.getMessagePackageName(msg.Name)
-			packageParts := strings.Split(packageName, ".")
-			if _, ok := p.packages[packageName]; !ok {
-				p.packages[packageName] = &defs.ProtoPackage{
-					FileName:      packageParts[len(packageParts)-1],
-					PackageName:   packageName,
-					GoPackageName: strings.ReplaceAll(packageName, ".", "/"),
-					Messages:      make(map[string]*defs.ProtoMessage, 16),
-				}
-			}
-
-			p.packages[packageName].Messages[msg.Name] = msg
-		}
-	}
-
-	p.reorganizeAndFixPackages()
-	p.reorganizeFields()
-
-	return nil
-}
-
-func (p *Parser) GenerateProtoDefs() error {
-	for _, pkg := range p.packages {
-		if err := p.generator.WritePackage(pkg); err != nil {
-			return fmt.Errorf("write package: %w", err)
-		}
-	}
-	return nil
 }

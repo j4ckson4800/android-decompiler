@@ -49,13 +49,13 @@ func NewAnnotationDef(p Parser) (AnnotationDef, error) {
 	}
 
 	if err := p.ReadStruct(&tables.Fields); err != nil {
-		return AnnotationDef{}, err
+		return AnnotationDef{}, fmt.Errorf("read fields: %w", err)
 	}
 	if err := p.ReadStruct(&tables.Methods); err != nil {
-		return AnnotationDef{}, err
+		return AnnotationDef{}, fmt.Errorf("read methods: %w", err)
 	}
 	if err := p.ReadStruct(&tables.Parameters); err != nil {
-		return AnnotationDef{}, err
+		return AnnotationDef{}, fmt.Errorf("read parameters: %w", err)
 	}
 
 	return AnnotationDef{

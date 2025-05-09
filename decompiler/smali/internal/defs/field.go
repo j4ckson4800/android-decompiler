@@ -10,9 +10,9 @@ type FieldDef struct {
 	Name  uint32
 }
 
-func NewFieldDef(r Parser) (FieldDef, error) {
+func NewFieldDef(p Parser) (FieldDef, error) {
 	field := FieldDef{}
-	if err := r.ReadStruct(&field); err != nil {
+	if err := p.ReadStruct(&field); err != nil {
 		return FieldDef{}, fmt.Errorf("read struct: %w", err)
 	}
 

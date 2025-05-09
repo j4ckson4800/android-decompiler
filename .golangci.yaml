@@ -1,0 +1,186 @@
+version: "2"
+run:
+  go: "1.23"
+linters:
+  default: all
+  disable:
+    - contextcheck
+    - exhaustruct
+    - gochecknoglobals
+    - godox
+    - inamedparam
+    - interfacebloat
+    - ireturn
+    - mnd
+    - nlreturn
+    - nolintlint
+    - paralleltest
+    - tagalign
+    - whitespace
+    - wsl
+    # retarded with defers
+    - errcheck
+    # unusable with instruction switches
+    - lll
+    - exhaustive
+    # prevents my stupid prints
+    - forbidigo
+    # just retarded as always
+    - funlen
+    - cyclop
+    - gocyclo
+    - gosec
+    - gocognit
+    - revive
+  settings:
+    cyclop:
+      max-complexity: 20
+    depguard:
+      rules:
+        main:
+          allow:
+            - $gostd
+            - github.com
+    dupl:
+      threshold: 175
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+    funlen:
+      lines: 120
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    gocritic:
+      disabled-checks:
+        - appendAssign
+        - dupImport
+        - evalOrder
+        - ifElseChain
+        - octalLiteral
+        - regexpSimplify
+        - sloppyReassign
+        - truncateCmp
+        - typeDefFirst
+        - unnamedResult
+        - unnecessaryDefer
+        - whyNoLint
+        - wrapperFunc
+        - rangeValCopy
+        - hugeParam
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - performance
+    gosec:
+      excludes:
+        - G307
+        - G108
+    lll:
+      line-length: 140
+    mnd:
+      ignored-numbers:
+        - "1"
+        - "2"
+        - "3"
+        - "4"
+        - "5"
+        - "100.0"
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+        - name: bool-literal-in-expr
+        - name: time-equal
+        - name: constant-logical-expr
+        - name: receiver-naming
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+    varnamelen:
+      max-distance: 5
+      min-name-length: 2
+      check-receiver: false
+      check-return: false
+      check-type-param: false
+      ignore-names:
+        - err
+        - ctx
+      ignore-type-assert-ok: false
+      ignore-map-index-ok: false
+      ignore-chan-recv-ok: false
+      ignore-decls:
+        - t testing.T
+        - T any
+        - i int
+        - i uint32
+        - j int
+        - b byte
+        - r *zip.Reader
+        - m internal.Method
+        - p Parser
+        - p internal.Parser
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - errors.Join(
+        - .Wrap(
+        - .Wrapf(
+        - .WithMessage(
+        - .WithMessagef(
+        - .WithStack(
+        - status.Error
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - staticcheck
+        text: should not use dot imports
+      - linters:
+          - staticcheck
+        text: at least one file in a package should have a package comment
+      - linters:
+          - golint
+        text: should have a package comment, unless it's in another file for this package
+      - linters:
+          - golint
+        text: should have comment or be unexported
+      - linters:
+          - dupl
+          - funlen
+          - gosec
+          - varnamelen
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

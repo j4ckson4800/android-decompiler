@@ -6,17 +6,17 @@ const (
 	ResNullType       ResChunkType = 0x0000
 	ResStringPoolType ResChunkType = 0x0001
 	ResTableType      ResChunkType = 0x0002
-	ResXmlType        ResChunkType = 0x0003
+	ResXMLType        ResChunkType = 0x0003
 
-	ResXmlFirstChunkType     ResChunkType = 0x0100
-	ResXmlStartNamespaceType ResChunkType = 0x0100
-	ResXmlEndNamespaceType   ResChunkType = 0x0101
-	ResXmlStartElementType   ResChunkType = 0x0102
-	ResXmlEndElementType     ResChunkType = 0x0103
-	ResXmlCdataType          ResChunkType = 0x0104
+	ResXMLFirstChunkType     ResChunkType = 0x0100
+	ResXMLStartNamespaceType ResChunkType = 0x0100
+	ResXMLEndNamespaceType   ResChunkType = 0x0101
+	ResXMLStartElementType   ResChunkType = 0x0102
+	ResXMLEndElementType     ResChunkType = 0x0103
+	ResXMLCdataType          ResChunkType = 0x0104
 
-	ResXmlLastChunkType   ResChunkType = 0x017f
-	ResXmlResourceMapType ResChunkType = 0x0180
+	ResXMLLastChunkType   ResChunkType = 0x017f
+	ResXMLResourceMapType ResChunkType = 0x0180
 
 	ResTablePackageType       ResChunkType = 0x0200 // 512
 	ResTableTypeType          ResChunkType = 0x0201 // 513
@@ -30,7 +30,7 @@ const (
 type StringPoolFlag uint32
 
 const (
-	UTF8_FLAG StringPoolFlag = (1 << 8)
+	Utf8Flag StringPoolFlag = 1 << 8
 )
 
 type ResChunkHeader struct {
@@ -52,7 +52,7 @@ type RestStringPool struct {
 }
 
 func (s *RestStringPool) IsUTF8() bool {
-	return s.Flags&uint32(UTF8_FLAG) != 0
+	return s.Flags&uint32(Utf8Flag) != 0
 }
 
 type StringSpan struct {
@@ -62,7 +62,7 @@ type StringSpan struct {
 }
 
 type ResTable struct {
-	// https://github.com/iBotPeaches/platform_frameworks_base/blob/cd920c63bf716f17cc91d3e4ad914bfe0ba0871d/libs/androidfw/include/androidfw/ResourceTypes.h#L1640
+	// https://github.com/iBotPeaches/platform_frameworks_base/blob/main/libs/androidfw/include/androidfw/ResourceTypes.h#L1640
 	PackageID        uint32
 	PackageName      [256]byte
 	TypeStringOffset uint32

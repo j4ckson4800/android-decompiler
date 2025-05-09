@@ -19,8 +19,8 @@ type ProtoDef struct {
 	ParamsOffset uint32
 }
 
-func NewMethodDef(r Parser) (MethodDef, error) {
-	field, err := NewFieldDef(r)
+func NewMethodDef(p Parser) (MethodDef, error) {
+	field, err := NewFieldDef(p)
 	if err != nil {
 		return MethodDef{}, fmt.Errorf("new field def: %w", err)
 	}
@@ -28,15 +28,15 @@ func NewMethodDef(r Parser) (MethodDef, error) {
 	return MethodDef(field), nil
 }
 
-func NewMethodProtoDef(r Parser) (MethodProtoDef, error) {
-	count, err := r.ReadUint32()
+func NewMethodProtoDef(p Parser) (MethodProtoDef, error) {
+	count, err := p.ReadUint32()
 	if err != nil {
 		return MethodProtoDef{}, fmt.Errorf("read uint32: %w", err)
 	}
 
 	params := make([]uint16, 0, count)
-	for i := 0; i < int(count); i++ {
-		param, err := r.ReadUint16()
+	for range count {
+		param, err := p.ReadUint16()
 		if err != nil {
 			return MethodProtoDef{}, fmt.Errorf("read uint16: %w", err)
 		}
@@ -49,9 +49,9 @@ func NewMethodProtoDef(r Parser) (MethodProtoDef, error) {
 	}, nil
 }
 
-func NewProtoDef(r Parser) (ProtoDef, error) {
+func NewProtoDef(p Parser) (ProtoDef, error) {
 	proto := ProtoDef{}
-	if err := r.ReadStruct(&proto); err != nil {
+	if err := p.ReadStruct(&proto); err != nil {
 		return ProtoDef{}, fmt.Errorf("read struct: %w", err)
 	}
 

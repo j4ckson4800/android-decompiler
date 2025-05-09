@@ -8,6 +8,10 @@ import (
 	"github.com/j4ckson4800/android-decompiler/decompiler/smali/internal/defs"
 )
 
+var (
+	ErrInvalidHeaderSize = errors.New("invalid header size")
+)
+
 type defCreator[T any] func(p defs.Parser) (T, error)
 
 type Dex struct {
@@ -22,18 +26,18 @@ type Dex struct {
 	AuxiliaryStrings map[int]struct{}
 }
 
-func NewDex(r Parser) (Dex, error) {
-	header, err := defs.NewDexHeader(r)
+func NewDex(p Parser) (Dex, error) {
+	header, err := defs.NewDexHeader(p)
 	if err != nil {
-		return Dex{}, err
+		return Dex{}, fmt.Errorf("new dex header: %w", err)
 	}
 	if header.HeaderSize != defs.DexHeaderSize {
-		return Dex{}, errors.New("invalid header size")
+		return Dex{}, ErrInvalidHeaderSize
 	}
 
 	dex := Dex{
 		Header: header,
-		parser: r,
+		parser: p,
 	}
 
 	if err := dex.parseStrings(); err != nil {
@@ -58,13 +62,30 @@ func NewDex(r Parser) (Dex, error) {
 	return dex, nil
 }
 
+func (d *Dex) SanitizeAnnotations() error {
+	const noIndex = ^uint32(0)
+
+	for _, classDef := range d.ClassDefs {
+
+		if classDef.SourceFileIndex != noIndex {
+			d.AuxiliaryStrings[int(classDef.SourceFileIndex)] = struct{}{}
+		}
+
+		if err := d.parseAnnotations(classDef); err != nil {
+			return fmt.Errorf("parse annotations: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func (d *Dex) parseStrings() error {
-	stringOffs, err := parseDef(d.parser, defs.NewStringOffset, d.Header.StringIds)
+	stringOffs, err := parseDef(d.parser, defs.NewStringOffset, d.Header.StringIDs)
 	if err != nil {
 		return fmt.Errorf("parse defs: %w", err)
 	}
 
-	d.StringDefs = make([]defs.StringDef, 0, d.Header.StringIds.Size)
+	d.StringDefs = make([]defs.StringDef, 0, d.Header.StringIDs.Size)
 	for _, off := range stringOffs {
 		if err := d.parser.SetCursorTo(int64(off)); err != nil {
 			return fmt.Errorf("set cursor to: %w", err)
@@ -82,34 +103,34 @@ func (d *Dex) parseStrings() error {
 }
 
 func (d *Dex) parseTypeIDs() error {
-	if err := d.parser.SetCursorTo(int64(d.Header.TypeIds.Offset)); err != nil {
+	if err := d.parser.SetCursorTo(int64(d.Header.TypeIDs.Offset)); err != nil {
 		return fmt.Errorf("set cursor to: %w", err)
 	}
 
-	typeIds := make([]uint32, 0, d.Header.TypeIds.Size)
-	d.AuxiliaryStrings = make(map[int]struct{}, d.Header.TypeIds.Size)
-	for i := 0; i < int(d.Header.TypeIds.Size); i++ {
-		typeId, err := d.parser.ReadUint32()
+	typeIDs := make([]uint32, 0, d.Header.TypeIDs.Size)
+	d.AuxiliaryStrings = make(map[int]struct{}, d.Header.TypeIDs.Size)
+	for range d.Header.TypeIDs.Size {
+		typeID, err := d.parser.ReadUint32()
 		if err != nil {
 			return fmt.Errorf("read uint32: %w", err)
 		}
 
-		d.AuxiliaryStrings[int(typeId)] = struct{}{}
-		typeIds = append(typeIds, typeId)
+		d.AuxiliaryStrings[int(typeID)] = struct{}{}
+		typeIDs = append(typeIDs, typeID)
 	}
 
-	d.TypeIDs = typeIds
+	d.TypeIDs = typeIDs
 	return nil
 }
 
 func (d *Dex) parseMethodProtoDefs() error {
-	protoDefs, err := parseDef(d.parser, defs.NewProtoDef, d.Header.ProtoIds)
+	protoDefs, err := parseDef(d.parser, defs.NewProtoDef, d.Header.ProtoIDs)
 	if err != nil {
 		return fmt.Errorf("parse defs: %w", err)
 	}
 
-	methodProtoDefs := make([]defs.MethodProtoDef, 0, d.Header.ProtoIds.Size)
-	for i := 0; i < int(d.Header.ProtoIds.Size); i++ {
+	methodProtoDefs := make([]defs.MethodProtoDef, 0, d.Header.ProtoIDs.Size)
+	for i := range d.Header.ProtoIDs.Size {
 		methodProto := defs.MethodProtoDef{}
 		if protoDefs[i].ParamsOffset != 0 {
 			if err := d.parser.SetCursorTo(int64(protoDefs[i].ParamsOffset)); err != nil {
@@ -141,7 +162,7 @@ func (d *Dex) parseMethodProtoDefs() error {
 }
 
 func (d *Dex) parseFieldDefs() error {
-	fieldDefs, err := parseDef(d.parser, defs.NewFieldDef, d.Header.FieldIds)
+	fieldDefs, err := parseDef(d.parser, defs.NewFieldDef, d.Header.FieldIDs)
 	if err != nil {
 		return fmt.Errorf("parse defs: %w", err)
 	}
@@ -153,7 +174,7 @@ func (d *Dex) parseFieldDefs() error {
 }
 
 func (d *Dex) parseMethodDefs() error {
-	methodDefs, err := parseDef(d.parser, defs.NewMethodDef, d.Header.MethodIds)
+	methodDefs, err := parseDef(d.parser, defs.NewMethodDef, d.Header.MethodIDs)
 	if err != nil {
 		return fmt.Errorf("parse defs: %w", err)
 	}
@@ -294,23 +315,6 @@ func (d *Dex) parseAnnotations(classDef defs.ClassDef) error {
 	return nil
 }
 
-func (d *Dex) SanitizeAnnotations() error {
-	const noIndex = ^uint32(0)
-
-	for _, classDef := range d.ClassDefs {
-
-		if classDef.SourceFileIndex != noIndex {
-			d.AuxiliaryStrings[int(classDef.SourceFileIndex)] = struct{}{}
-		}
-
-		if err := d.parseAnnotations(classDef); err != nil {
-			return fmt.Errorf("parse annotations: %w", err)
-		}
-	}
-
-	return nil
-}
-
 func (d *Dex) parseClassDefs() error {
 	classDefs, err := parseDef(d.parser, defs.NewClassDef, d.Header.ClassDefs)
 	if err != nil {
@@ -321,14 +325,14 @@ func (d *Dex) parseClassDefs() error {
 	return nil
 }
 
-func parseDef[T any](r Parser, c defCreator[T], table defs.Table) ([]T, error) {
-	if err := r.SetCursorTo(int64(table.Offset)); err != nil {
+func parseDef[T any](p Parser, ctor defCreator[T], table defs.Table) ([]T, error) {
+	if err := p.SetCursorTo(int64(table.Offset)); err != nil {
 		return nil, fmt.Errorf("set cursor to: %w", err)
 	}
 
 	definitions := make([]T, 0, table.Size)
-	for i := 0; i < int(table.Size); i++ {
-		def, err := c(r)
+	for range table.Size {
+		def, err := ctor(p)
 		if err != nil {
 			return nil, fmt.Errorf("new class: %w", err)
 		}

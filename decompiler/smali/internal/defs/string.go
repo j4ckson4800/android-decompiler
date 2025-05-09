@@ -10,21 +10,21 @@ type StringDef struct {
 	Data []byte
 }
 
-func NewStringOffset(r Parser) (StringOffset, error) {
-	offset, err := r.ReadUint32()
+func NewStringOffset(p Parser) (StringOffset, error) {
+	offset, err := p.ReadUint32()
 	if err != nil {
 		return 0, fmt.Errorf("read uint32: %w", err)
 	}
 	return StringOffset(offset), nil
 }
 
-func NewStringDef(r Parser) (StringDef, error) {
-	size, err := r.ReadULEB128()
+func NewStringDef(p Parser) (StringDef, error) {
+	size, err := p.ReadULEB128()
 	if err != nil {
 		return StringDef{}, fmt.Errorf("read uleb128: %w", err)
 	}
 
-	data, err := r.ReadBytes(int64(size))
+	data, err := p.ReadBytes(int64(size))
 	if err != nil {
 		return StringDef{}, fmt.Errorf("read bytes: %w", err)
 	}

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/j4ckson4800/android-decompiler/decompiler/smali"
@@ -17,7 +16,7 @@ import (
 var ErrApkNotFoundInXapk = errors.New("apk not found in xapk")
 
 type Apk struct {
-	ManifestXml string
+	ManifestXML string
 	Dexes       []smali.Dex
 	Resources   resource.Table
 
@@ -44,22 +43,22 @@ func NewApkFromZip(r *zip.Reader, opts ...Option) (*Apk, error) {
 			SanitizeAnnotations: cfg.SanitizeAnnotations,
 		},
 	}
-	for _, f := range r.File {
-		if strings.HasSuffix(f.Name, "AndroidManifest.xml") {
-			if err := apk.readManifest(f); err != nil {
+	for _, file := range r.File {
+		if strings.HasSuffix(file.Name, "AndroidManifest.xml") {
+			if err := apk.readManifest(file); err != nil {
 				return nil, fmt.Errorf("read manifest: %w", err)
 			}
 		}
-		if strings.HasSuffix(f.Name, ".dex") {
-			if err := apk.readDex(f); err != nil {
+		if strings.HasSuffix(file.Name, ".dex") {
+			if err := apk.readDex(file); err != nil {
 				if !cfg.FailOnInvalidDex {
 					continue
 				}
 				return nil, fmt.Errorf("read dex: %w", err)
 			}
 		}
-		if strings.HasSuffix(f.Name, ".arsc") {
-			if err := apk.readResourceFile(f); err != nil {
+		if strings.HasSuffix(file.Name, ".arsc") {
+			if err := apk.readResourceFile(file); err != nil {
 				if !cfg.FailOnInvalidResource {
 					continue
 				}
@@ -110,13 +109,13 @@ func hasDexAndManifest(r *zip.Reader) bool {
 }
 
 func extractApkFromXapk(r *zip.Reader) (*zip.Reader, error) {
-	for _, f := range r.File {
+	for _, file := range r.File {
 
-		if !strings.HasSuffix(f.Name, ".apk") {
+		if !strings.HasSuffix(file.Name, ".apk") {
 			continue
 		}
 
-		baseName := filepath.Base(f.Name)
+		baseName := filepath.Base(file.Name)
 		if strings.HasPrefix(baseName, "config.") { // skip config apks
 			continue
 		}
@@ -126,7 +125,7 @@ func extractApkFromXapk(r *zip.Reader) (*zip.Reader, error) {
 		}
 
 		reader, err := func() (*zip.Reader, error) {
-			rc, err := f.Open()
+			rc, err := file.Open()
 			if err != nil {
 				return nil, fmt.Errorf("open: %w", err)
 			}
@@ -163,13 +162,13 @@ func (a *Apk) readDex(file *zip.File) error {
 		return fmt.Errorf("read from: %w", err)
 	}
 
-	d, err := smali.NewDex(bytes.NewReader(buf.Bytes()), a.cfg)
+	dex, err := smali.NewDex(bytes.NewReader(buf.Bytes()), a.cfg)
 	if err != nil {
 		return fmt.Errorf("parse: %w", err)
 	}
-	d.Filename = file.Name
+	dex.Filename = file.Name
 
-	a.Dexes = append(a.Dexes, d)
+	a.Dexes = append(a.Dexes, dex)
 	return nil
 }
 
@@ -187,7 +186,7 @@ func (a *Apk) readManifest(file *zip.File) error {
 
 	// NOTE: it's in binary xml format, decode it later
 	// https://github.com/google/agi/tree/main/core/os/android/binaryxml
-	a.ManifestXml = buf.String()
+	a.ManifestXML = buf.String()
 	return nil
 }
 
@@ -211,26 +210,4 @@ func (a *Apk) readResourceFile(file *zip.File) error {
 
 	a.Resources = table
 	return nil
-}
-
-func (a *Apk) ResolveResourceIfNeeded(arguments [][]string) [][]string {
-	for i := range arguments {
-		s := arguments[i]
-		for j := range s {
-			str := s[j]
-			if strings.HasPrefix(str, smali.ResolveResource) {
-				numericValue := strings.TrimPrefix(str, smali.ResolveResource+":")
-				n, err := strconv.Atoi(numericValue)
-				if err != nil {
-					continue
-				}
-				newValue, ok := a.Resources.StringsById[uint32(n)]
-				if !ok {
-					continue
-				}
-				s[j] = newValue
-			}
-		}
-	}
-	return arguments
 }

@@ -8,15 +8,19 @@ import (
 	"github.com/j4ckson4800/android-decompiler/decompiler/smali/resource/internal"
 )
 
+var (
+	ErrInvalidType = errors.New("invalid type")
+)
+
 type Table struct {
 	Strings       StringPool
-	StringsById   map[uint32]string
+	StringsByID   map[uint32]string
 	StringsByName map[string]string
 }
 
 func NewTable(parser internal.Parser) (Table, error) {
 	table := Table{
-		StringsById:   make(map[uint32]string, 128),
+		StringsByID:   make(map[uint32]string, 128),
 		StringsByName: make(map[string]string, 128),
 	}
 
@@ -26,7 +30,7 @@ func NewTable(parser internal.Parser) (Table, error) {
 	}
 
 	if hdr.Type != internal.ResTableType {
-		return table, errors.New("invalid type")
+		return table, ErrInvalidType
 	}
 
 	tableHeader := internal.ResTableHeader{}
@@ -67,6 +71,40 @@ func NewTable(parser internal.Parser) (Table, error) {
 	}
 
 	return table, nil
+}
+
+func (t *Table) parseResTableType(parser internal.Parser, pkg internal.ResTable, typeStrings, keyStrings StringPool, resTypeChunk ResTypeChunk, chunkEnd int64) error {
+	if tstr, err := typeStrings.GetString(parser, uint32(resTypeChunk.RawChunk.ID-1)); err != nil || tstr != "string" {
+		return fmt.Errorf("get string: %w", err)
+	}
+
+	for i := range resTypeChunk.Entries {
+		entry, err := resTypeChunk.GetEntry(parser, i, chunkEnd)
+		if err != nil {
+			return fmt.Errorf("get entry: %w", err)
+		}
+		if entry.Key == -1 {
+			continue
+		}
+		str, err := keyStrings.GetString(parser, uint32(entry.Key))
+		if err != nil {
+			return fmt.Errorf("get string: %w", err)
+		}
+
+		if str == "" {
+			continue
+		}
+
+		entryValue, err := t.Strings.GetString(parser, entry.Data)
+		if err != nil {
+			return fmt.Errorf("get string: %w", err)
+		}
+
+		t.StringsByName[str] = entryValue
+		t.StringsByID[pkg.PackageID<<24|uint32(resTypeChunk.RawChunk.ID)<<16|uint32(resTypeChunk.Entries[i].ID)] = entryValue
+	}
+
+	return nil
 }
 
 func (t *Table) parsePackageTable(parser internal.Parser, chunkOffset int64, pkg internal.ResTable) error {
@@ -132,33 +170,8 @@ func (t *Table) parsePackageTable(parser internal.Parser, chunkOffset int64, pkg
 				return fmt.Errorf("new type chunk: %w", err)
 			}
 
-			if tstr, err := typeStrings.GetString(parser, uint32(resTypeChunk.RawChunk.ID-1)); err == nil && tstr == "string" {
-
-				for i := range resTypeChunk.Entries {
-					entry, err := resTypeChunk.GetEntry(parser, i, chunkEnd)
-					if err != nil {
-						return fmt.Errorf("get entry: %w", err)
-					}
-					if entry.Key == -1 {
-						continue
-					}
-					str, err := keyStrings.GetString(parser, uint32(entry.Key))
-					if err != nil {
-						return fmt.Errorf("get string: %w", err)
-					}
-
-					if str == "" {
-						continue
-					}
-
-					entryValue, err := t.Strings.GetString(parser, entry.Data)
-					if err != nil {
-						return fmt.Errorf("get string: %w", err)
-					}
-
-					t.StringsByName[str] = entryValue
-					t.StringsById[pkg.PackageID<<24|uint32(resTypeChunk.RawChunk.ID)<<16|uint32(resTypeChunk.Entries[i].Id)] = entryValue
-				}
+			if err := t.parseResTableType(parser, pkg, typeStrings, keyStrings, resTypeChunk, chunkEnd); err != nil {
+				return fmt.Errorf("parse res table type: %w", err)
 			}
 			if err := parser.SetCursorTo(chunkEnd); err != nil {
 				return fmt.Errorf("set cursor: %w", err)

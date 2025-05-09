@@ -45,12 +45,12 @@ func newAnnotationValue(p Parser) (AnnotationValue, error) {
 	for i := range elements {
 		element := AnnotationElement{}
 
-		nameId, err := p.ReadULEB128()
+		nameID, err := p.ReadULEB128()
 		if err != nil {
 			return AnnotationValue{}, fmt.Errorf("read uleb128: %w", err)
 		}
 
-		element.NameID = nameId
+		element.NameID = nameID
 		val, err := NewValue(p)
 		if err != nil {
 			return AnnotationValue{}, fmt.Errorf("new value: %w", err)

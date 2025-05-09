@@ -31,13 +31,13 @@ func NewMethod(cls, name, returnType, argumentsSignature string, m internal.Meth
 
 func (m *Method) ParseCode() error {
 	reader := bytes.NewReader(m.rawMethod.CodeItem.Payload)
-	p := NewParser(reader)
+	codeParser := NewParser(reader)
 
 	m.Body = make([]Instruction, 0, len(m.rawMethod.CodeItem.Payload)/(2*2)) // 2 bytes per word, instruction usually consist of 2 words
 	end := len(m.rawMethod.CodeItem.Payload)
 	globalOffset := 0
-	for p.HasMore() {
-		instr, err := p.ParseInstruction()
+	for codeParser.HasMore() {
+		instr, err := codeParser.ParseInstruction()
 		if err != nil {
 			return fmt.Errorf("read instruction: %w", err)
 		}
@@ -59,7 +59,7 @@ func (m *Method) ParseCode() error {
 			}
 
 			reader = bytes.NewReader(m.rawMethod.CodeItem.Payload[offset:end])
-			p = NewParser(reader)
+			codeParser = NewParser(reader)
 		}
 
 		m.Body = append(m.Body, instr)
