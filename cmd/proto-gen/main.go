@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/j4ckson4800/android-decompiler/cmd/proto-gen/internal/app"
+	"github.com/j4ckson4800/android-decompiler/cmd/proto-gen/internal/app/codegen"
 )
 
 func main() {
@@ -22,7 +23,13 @@ func main() {
 		return
 	}
 
-	parser, err := app.NewParser(*apkFile, *outDir)
+	gen, err := codegen.NewCodegen(*outDir)
+	if err != nil {
+		fmt.Printf("Error initializing codegen: %v\n", err)
+		return
+	}
+
+	parser, err := app.NewParser(*apkFile, gen)
 	if err != nil {
 		fmt.Printf("Error initializing parser: %v\n", err)
 		return

@@ -7,12 +7,13 @@ message {{.Name}} {
     }
 {{- end }}
 {{- range .Fields }}
-    {{ .Qualifier }} {{.Type}} {{.Name}} = {{.Index}};
+    {{with .Qualifier}}{{ . }} {{ end }}{{.Type}} {{.Name}} = {{.Index}};
 {{- end }}
-{{ range .Enums }}
+{{- range .Enums }}
     {{ template "enum.proto.tpl" . }}
-{{ end }}
+{{- end }}
 {{- range .SubMessages }}
-    {{ template "message.proto.tpl" . }}
+{{ include "message.proto.tpl" . | indent 4}}
+
 {{- end }}
 }

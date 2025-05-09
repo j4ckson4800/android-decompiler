@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
-	"text/template"
 
 	"github.com/j4ckson4800/android-decompiler/cmd/proto-gen/internal/app/defs"
 	"github.com/j4ckson4800/android-decompiler/decompiler"
@@ -16,27 +14,23 @@ import (
 
 var (
 	ErrInvalidApkFile = errors.New("invalid APK file")
-	ErrInvalidOutDir  = errors.New("invalid output directory")
 )
 
-type Parser struct {
-	OutDir string
-
-	apk        *decompiler.Apk
-	templateFs *template.Template
-
-	packages map[string]*defs.ProtoPackage
+type codeGenerator interface {
+	WritePackage(pkg *defs.ProtoPackage) error
 }
 
-func NewParser(apkFile, outDir string) (*Parser, error) {
+type Parser struct {
+	apk *decompiler.Apk
+
+	packages  map[string]*defs.ProtoPackage
+	generator codeGenerator
+}
+
+func NewParser(apkFile string, generator codeGenerator) (*Parser, error) {
 
 	if apkFile == "" {
 		return nil, ErrInvalidApkFile
-	}
-
-	tFs, err := template.ParseFS(fs, "tpl/**.proto.tpl")
-	if err != nil {
-		return nil, fmt.Errorf("parse template: %w", err)
 	}
 
 	file, err := os.Open(apkFile)
@@ -55,10 +49,9 @@ func NewParser(apkFile, outDir string) (*Parser, error) {
 	}
 
 	return &Parser{
-		OutDir:     outDir,
-		apk:        apk,
-		templateFs: tFs,
-		packages:   make(map[string]*defs.ProtoPackage, 16),
+		apk:       apk,
+		packages:  make(map[string]*defs.ProtoPackage, 16),
+		generator: generator,
 	}, nil
 }
 
@@ -415,26 +408,8 @@ func (p *Parser) Parse() error {
 
 func (p *Parser) GenerateProtoDefs() error {
 	for _, pkg := range p.packages {
-		packageDir := filepath.Join(p.OutDir, strings.TrimSuffix(pkg.GoPackageName, pkg.FileName))
-		if err := os.MkdirAll(packageDir, 0755); err != nil {
-			return fmt.Errorf("create directory: %w", err)
-		}
-
-		err := func() error {
-			file, err := os.Create(packageDir + "/" + pkg.FileName + ".proto")
-			if err != nil {
-				return fmt.Errorf("create file: %w", err)
-			}
-			defer file.Close()
-
-			if err := p.templateFs.ExecuteTemplate(file, "package.proto.tpl", pkg); err != nil {
-				return fmt.Errorf("execute template: %w", err)
-			}
-			return nil
-		}()
-
-		if err != nil {
-			return fmt.Errorf("generate proto defs: %w", err)
+		if err := p.generator.WritePackage(pkg); err != nil {
+			return fmt.Errorf("write package: %w", err)
 		}
 	}
 	return nil

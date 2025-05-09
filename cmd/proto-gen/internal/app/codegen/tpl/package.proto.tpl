@@ -8,7 +8,7 @@ import "{{.}}.proto";
 
 
 {{- range .Messages }}
-{{ if .IsGlobal }}{{ template "message.proto.tpl" . }}{{ end }}
+{{ if .IsGlobal }}{{ include "message.proto.tpl" . }}{{else}}{{ end }}
 {{- end }}
 
 {{- range .Enums }}
