@@ -41,12 +41,6 @@ message SDKInitResponse {
             int32 type = 1;
         }
     }
-    message EventCollectionConfig {
-        bool event_collection_enabled = 1;
-        bool mref_collection_enabled = 2;
-        string app_background_tracking_url = 3;
-        string app_foreground_tracking_url = 4;
-    }
     message CrashReportingConfig {
         bool enabled = 1;
         string url = 2;
@@ -59,6 +53,12 @@ message SDKInitResponse {
         string zip_code = 5;
         string city = 6;
         string region = 7;
+    }
+    message EventCollectionConfig {
+        bool event_collection_enabled = 1;
+        bool mref_collection_enabled = 2;
+        string app_background_tracking_url = 3;
+        string app_foreground_tracking_url = 4;
     }
     message ExperimentalFeatureFlag {
         string name = 1;

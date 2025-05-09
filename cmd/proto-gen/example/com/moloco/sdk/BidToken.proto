@@ -48,9 +48,6 @@ message ClientBidTokenComponents {
         string us_privacy = 4;
         string tcf_consent_string = 5;
     }
-    message Geo {
-        int32 utcoffset = 1;
-    }
     message Device {
         string language = 1;
         string osv = 2;
@@ -67,6 +64,9 @@ message ClientBidTokenComponents {
         double pxratio = 13;
         string os = 14;
         int64 dbt = 15;
+    }
+    message Geo {
+        int32 utcoffset = 1;
     }
 }
 

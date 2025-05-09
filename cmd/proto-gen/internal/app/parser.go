@@ -26,8 +26,10 @@ type codeGenerator interface {
 type Parser struct {
 	apk *decompiler.Apk
 
-	packages  map[string]*defs.ProtoPackage
-	generator codeGenerator
+	internalTypes map[string]defs.MutatorFunc
+	packages      map[string]*defs.ProtoPackage
+	generator     codeGenerator
+	mutatorList   []defs.Mutator
 }
 
 func NewParser(apkFile string, generator codeGenerator) (*Parser, error) {
@@ -52,9 +54,11 @@ func NewParser(apkFile string, generator codeGenerator) (*Parser, error) {
 	}
 
 	return &Parser{
-		apk:       apk,
-		packages:  make(map[string]*defs.ProtoPackage, 16),
-		generator: generator,
+		apk:           apk,
+		packages:      make(map[string]*defs.ProtoPackage, 16),
+		internalTypes: make(map[string]defs.MutatorFunc, 4),
+		generator:     generator,
+		mutatorList:   defs.NewMutatorList(),
 	}, nil
 }
 
@@ -133,6 +137,7 @@ func (p *Parser) parseClass(cls smali.Class) (*defs.ProtoMessage, error) {
 		Fields:   make([]*defs.ProtoField, 0, len(cls.StaticFields)-2), // Omit default instance and parser
 	}
 
+	// Find out which fields are defined in the class
 	for _, staticField := range cls.StaticFields {
 		if !strings.HasSuffix(staticField.Name, defs.ProtobufFieldNumber) {
 			continue
@@ -147,6 +152,7 @@ func (p *Parser) parseClass(cls smali.Class) (*defs.ProtoMessage, error) {
 		)
 	}
 
+	// Get raw field types
 	for _, instanceField := range cls.InstanceFields {
 		for _, fieldDef := range msg.Fields {
 			if strings.ReplaceAll(fieldDef.Name, "_", "")+"_" == strings.ToLower(instanceField.Name) {
@@ -281,46 +287,26 @@ func (p *Parser) guessInternalProtoType(messageName string, field *defs.ProtoFie
 		return true
 	}
 
+	if mutator, ok := p.internalTypes[field.Type]; ok {
+		return mutator(field)
+	}
+
 	for _, dex := range p.apk.Dexes {
 		cls, ok := dex.Classes[field.Type]
 		if !ok {
 			continue
 		}
 
-		// first of all check for `bytes` since it's ByteBuffer, not List
-		if slices.ContainsFunc(
-			cls.Methods, func(method smali.Method) bool {
-				return method.Name == "byteAt"
-			},
-		) {
-			field.Type = "bytes"
-			return true
+		for _, mutator := range p.mutatorList {
+			if slices.ContainsFunc(
+				cls.Methods, func(method smali.Method) bool {
+					return method.Name == mutator.MethodName
+				},
+			) {
+				p.internalTypes[field.Type] = mutator.Mutator
+				return mutator.Mutator(field)
+			}
 		}
-
-		if !slices.ContainsFunc(
-			cls.Methods, func(method smali.Method) bool {
-				return method.Name == "isModifiable"
-			},
-		) {
-			continue
-		}
-
-		// We have list over here
-		field.Qualifier = "repeated"
-		field.Type = "string"
-
-		// Try to find if it's list of ints
-		if slices.ContainsFunc(
-			cls.Methods, func(method smali.Method) bool {
-				return method.Name == "addInt"
-			},
-		) {
-			field.Type = "int32"
-			return true
-		}
-
-		fmt.Printf("Field %s of message %s has unknown list type, `string` assumed\n", field.Name, messageName)
-		return true
 	}
 
 	fmt.Printf("Field %s of message %s has no type, probably because of oneof or any abuse\n", field.Name, messageName)

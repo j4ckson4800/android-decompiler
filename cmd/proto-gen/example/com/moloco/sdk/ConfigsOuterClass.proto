@@ -9,16 +9,16 @@ message Configs {
             ConfigsOuterClass.Configs.IOSConfigs ios_config = 2;
     }
     ConfigsOuterClass.Configs.CommonConfigs common_configs = 3;
+    message IOSConfigs {
+    }
+    message AndroidConfigs {
+    }
     message CommonConfigs {
         ConfigsOuterClass.Configs.CommonConfigs.MediaConfig media_config = 1;
         message MediaConfig {
             int64 streaming_chunk_size_kilobytes = 1;
             double min_streaming_playable_duration_on_timeout_secs = 2;
         }
-    }
-    message IOSConfigs {
-    }
-    message AndroidConfigs {
     }
 }
 

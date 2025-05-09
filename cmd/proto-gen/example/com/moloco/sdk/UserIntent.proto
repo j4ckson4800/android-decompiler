@@ -17,24 +17,17 @@ message UserAdInteractionExt {
     UserIntent.UserAdInteractionExt.App app = 5;
     UserIntent.UserAdInteractionExt.Network network = 6;
     UserIntent.UserAdInteractionExt.MolocoSDK sdk = 7;
-    message Device {
-        int32 os = 1;
-        string os_ver = 2;
-        string model = 3;
-        float screen_scale = 4;
-    }
-    message Network {
-        int32 connection_type = 1;
-        string carrier = 2;
-    }
-    message AppForegroundingInteraction {
-        int64 bg_ts_ms = 1;
+    message ImpressionInteraction {
     }
     message Position {
         float x = 1;
         float y = 2;
     }
-    message ImpressionInteraction {
+    message Device {
+        int32 os = 1;
+        string os_ver = 2;
+        string model = 3;
+        float screen_scale = 4;
     }
     message ClickInteraction {
         UserIntent.UserAdInteractionExt.Position click_pos = 1;
@@ -43,24 +36,31 @@ message UserAdInteractionExt {
         UserIntent.UserAdInteractionExt.Size view_size = 4;
         repeated string buttons = 5;
     }
-    message Button {
-        int32 type = 1;
-        UserIntent.UserAdInteractionExt.Position pos = 2;
-        UserIntent.UserAdInteractionExt.Size size = 3;
-    }
-    message Size {
-        float w = 1;
-        float h = 2;
+    message AppBackgroundingInteraction {
     }
     message App {
         string id = 1;
         string ver = 2;
     }
-    message AppBackgroundingInteraction {
+    message Size {
+        float w = 1;
+        float h = 2;
+    }
+    message Network {
+        int32 connection_type = 1;
+        string carrier = 2;
+    }
+    message AppForegroundingInteraction {
+        int64 bg_ts_ms = 1;
     }
     message MolocoSDK {
         string core_ver = 1;
         string adapter_ver = 2;
+    }
+    message Button {
+        int32 type = 1;
+        UserIntent.UserAdInteractionExt.Position pos = 2;
+        UserIntent.UserAdInteractionExt.Size size = 3;
     }
 }
 
