@@ -1,0 +1,42 @@
+syntax = "proto3";
+package com.vungle.ads.internal.protos.Sdk;
+option go_package = "com/vungle/ads/internal/protos/Sdk";
+
+
+message MetricBatch {
+    repeated string metrics = 1;
+}
+message SDKError {
+    int64 at = 1;
+    int32 reason = 2;
+    string message = 3;
+    string eventid = 4;
+    string make = 5;
+    string model = 6;
+    string os = 7;
+    string osversion = 8;
+    string connectiontype = 9;
+    string connectiontypedetail = 10;
+    string placementreferenceid = 11;
+    string creativeid = 12;
+    string sessionid = 13;
+    string connectiontypedetailandroid = 101;
+}
+message SDKErrorBatch {
+    repeated string errors = 1;
+}
+message SDKMetric {
+    int32 type = 1;
+    int64 value = 2;
+    string meta = 3;
+    string make = 4;
+    string model = 5;
+    string os = 6;
+    string osversion = 7;
+    string connectiontype = 8;
+    string connectiontypedetail = 9;
+    string placementreferenceid = 10;
+    string creativeid = 11;
+    string eventid = 12;
+    string sessionid = 13;
+}

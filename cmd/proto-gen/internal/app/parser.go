@@ -255,6 +255,10 @@ func (p *Parser) fixOneofTypedFields(cls smali.Class, msg *defs.ProtoMessage) er
 			}
 
 			field.Type = setter.ArgumentsSignature
+			if defType, ok := defs.JavaDefaultTypes[setter.ArgumentsSignature]; ok {
+				field.Type = defType
+			}
+
 			oneOfs[clsFieldIdx].Fields = append(oneOfs[clsFieldIdx].Fields, field)
 		}
 	}

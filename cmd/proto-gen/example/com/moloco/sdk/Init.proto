@@ -1,0 +1,74 @@
+syntax = "proto3";
+package com.moloco.sdk.Init;
+option go_package = "com/moloco/sdk/Init";
+
+
+import "ConfigsOuterClass.proto";
+
+message SDKInitResponse {
+    string app_id = 1;
+    string publisher_id = 2;
+    string country_iso3_code = 3;
+    repeated string ad_units = 4;
+    int32 resolved_region = 5;
+    string ad_server_url = 6;
+    string country_iso2_code = 7;
+    string platform_id = 8;
+    bool verify_banner_visible = 9;
+    Init.SDKInitResponse.Geo geo = 10;
+    Init.SDKInitResponse.EventCollectionConfig event_collection_config = 11;
+    Init.SDKInitResponse.BidTokenConfig bid_token_config = 12;
+    repeated string experimental_feature_flags = 13;
+    Init.SDKInitResponse.OperationalMetricsConfig operational_metrics_config = 14;
+    Init.SDKInitResponse.CrashReportingConfig crash_reporting_config = 15;
+    ConfigsOuterClass.Configs configs = 16;
+    message OperationalMetricsConfig {
+        bool enabled = 1;
+        string url = 2;
+        int32 polling_interval_seconds = 3;
+    }
+    message BidTokenConfig {
+        string bid_token_url = 2;
+    }
+    message AdUnit {
+        string id = 1;
+        int32 type = 2;
+        int32 ad_frequency = 3;
+        float bid_floor = 4;
+        string name = 5;
+        Init.SDKInitResponse.AdUnit.Native native = 6;
+        message Native {
+            int32 type = 1;
+        }
+    }
+    message EventCollectionConfig {
+        bool event_collection_enabled = 1;
+        bool mref_collection_enabled = 2;
+        string app_background_tracking_url = 3;
+        string app_foreground_tracking_url = 4;
+    }
+    message CrashReportingConfig {
+        bool enabled = 1;
+        string url = 2;
+    }
+    message Geo {
+        string country_iso3_code = 1;
+        string country_iso2_code = 2;
+        float latitude = 3;
+        float longitude = 4;
+        string zip_code = 5;
+        string city = 6;
+        string region = 7;
+    }
+    message ExperimentalFeatureFlag {
+        string name = 1;
+        string value = 2;
+    }
+}
+
+
+
+
+
+
+

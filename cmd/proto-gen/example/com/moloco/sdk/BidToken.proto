@@ -1,0 +1,73 @@
+syntax = "proto3";
+package com.moloco.sdk.BidToken;
+option go_package = "com/moloco/sdk/BidToken";
+
+
+message BidTokenRequestV2 {
+    BidToken.BidTokenRequestV2.BidTokenComponents bid_token_components = 2;
+    message BidTokenComponents {
+        string idfv = 1;
+        BidToken.BidTokenRequestV2.BidTokenComponents.Privacy privacy = 2;
+        message Privacy {
+            bool ccpa = 1;
+            bool gdpr = 2;
+            bool coppa = 3;
+            string us_privacy = 4;
+            string tcf_consent_string = 5;
+        }
+    }
+}
+
+
+message BidTokenRequestV3 {
+}
+message BidTokenResponseV2 {
+    string bid_token = 1;
+}
+message BidTokenResponseV3 {
+    string bid_token = 1;
+    string pk = 2;
+    BidToken.BidTokenResponseV3.ClientTokenConfigs client_token_configs = 3;
+    message ClientTokenConfigs {
+        bool enable_dbt = 1;
+    }
+}
+
+message ClientBidToken {
+    bytes es = 1;
+    bytes payload = 2;
+}
+message ClientBidTokenComponents {
+    string idfv = 1;
+    BidToken.ClientBidTokenComponents.Privacy privacy = 2;
+    BidToken.ClientBidTokenComponents.Device device = 3;
+    message Privacy {
+        bool ccpa = 1;
+        bool gdpr = 2;
+        bool coppa = 3;
+        string us_privacy = 4;
+        string tcf_consent_string = 5;
+    }
+    message Geo {
+        int32 utcoffset = 1;
+    }
+    message Device {
+        string language = 1;
+        string osv = 2;
+        string make = 3;
+        string model = 4;
+        string hwv = 5;
+        string carrier = 6;
+        int32 devicetype = 7;
+        int32 js = 8;
+        BidToken.ClientBidTokenComponents.Geo geo = 9;
+        int32 w = 10;
+        int32 h = 11;
+        int32 ppi = 12;
+        double pxratio = 13;
+        string os = 14;
+        int64 dbt = 15;
+    }
+}
+
+

@@ -1,0 +1,20 @@
+syntax = "proto3";
+package com.moloco.sdk.MetricsRequest;
+option go_package = "com/moloco/sdk/MetricsRequest";
+
+
+message PostMetricsRequest {
+    repeated string counts = 1;
+    repeated string durations = 2;
+    message CountEvent {
+        string name = 1;
+        int32 count = 2;
+        repeated string tags = 3;
+    }
+    message TimerEvent {
+        string name = 1;
+        int64 elapsed_time_millis = 2;
+        repeated string tags = 3;
+    }
+}
+

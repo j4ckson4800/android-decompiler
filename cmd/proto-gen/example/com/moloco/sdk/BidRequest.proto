@@ -1,0 +1,288 @@
+syntax = "proto3";
+package com.moloco.sdk.BidRequest;
+option go_package = "com/moloco/sdk/BidRequest";
+
+
+message SdkBidRequest {
+    BidRequest.SdkBidRequest.App app = 1;
+    BidRequest.SdkBidRequest.Device device = 2;
+    BidRequest.SdkBidRequest.Imp imp = 3;
+    BidRequest.SdkBidRequest.Regs regs = 4;
+    int32 tmax = 5;
+    BidRequest.SdkBidRequest.User user = 6;
+    message Device {
+        bool dnt = 1;
+        string ua = 2;
+        string ip = 3;
+        BidRequest.SdkBidRequest.Device.Geo geo = 4;
+        string didsha1 = 5;
+        string didmd5 = 6;
+        string dpidsha1 = 7;
+        string dpidmd5 = 8;
+        string ipv6 = 9;
+        string carrier = 10;
+        string language = 11;
+        string make = 12;
+        string model = 13;
+        string os = 14;
+        string osv = 15;
+        bool js = 16;
+        int32 connectiontype = 17;
+        int32 devicetype = 18;
+        string flashver = 19;
+        string ifa = 20;
+        string macsha1 = 21;
+        string macmd5 = 22;
+        bool lmt = 23;
+        string hwv = 24;
+        int32 w = 25;
+        int32 h = 26;
+        int32 ppi = 27;
+        double pxratio = 28;
+        bool geofetch = 29;
+        string mccmnc = 30;
+        BidRequest.SdkBidRequest.Device.UserAgent sua = 31;
+        string langb = 32;
+        message UserAgent {
+            repeated string browsers = 1;
+            BidRequest.SdkBidRequest.Device.UserAgent.BrandVersion platform = 2;
+            bool mobile = 3;
+            string architecture = 4;
+            string bitness = 5;
+            string model = 6;
+            int32 source = 7;
+            message BrandVersion {
+                string brand = 1;
+                repeated string version = 2;
+            }
+        }
+        message Geo {
+            double lat = 1;
+            double lon = 2;
+            string country = 3;
+            string region = 4;
+            string regionfips104 = 5;
+            string metro = 6;
+            string city = 7;
+            string zip = 8;
+            int32 type = 9;
+            int32 utcoffset = 10;
+            int32 accuracy = 11;
+            int32 lastfix = 12;
+            int32 ipservice = 13;
+        }
+    }
+    message Regs {
+        bool coppa = 1;
+        BidRequest.SdkBidRequest.Regs.Ext ext = 2;
+        message Ext {
+            int32 ccpa = 1;
+            int32 gdpr = 2;
+            string us_privacy = 3;
+        }
+    }
+    message Imp {
+        string id = 1;
+        BidRequest.SdkBidRequest.Imp.Banner banner = 2;
+        BidRequest.SdkBidRequest.Imp.Video video = 3;
+        string displaymanager = 4;
+        string displaymanagerver = 5;
+        bool instl = 6;
+        string tagid = 7;
+        double bidfloor = 8;
+        string bidfloorcur = 9;
+        repeated string iframebuster = 10;
+        BidRequest.SdkBidRequest.Imp.Pmp pmp = 11;
+        bool secure = 12;
+        BidRequest.SdkBidRequest.Imp.Native native = 13;
+        int32 exp = 14;
+        BidRequest.SdkBidRequest.Imp.Audio audio = 15;
+        bool clickbrowser = 16;
+        repeated string metric = 17;
+        bool rwdd = 18;
+        int32 ssai = 19;
+        message Native {
+            oneof request_oneof {
+                    string request = 1;
+                    BidRequest.SdkBidRequest.Imp.Native.NativeRequest request_native = 50;
+            }
+            string ver = 2;
+            repeated int32 api = 3;
+            repeated int32 battr = 4;
+            message NativeRequest {
+                string ver = 1;
+                int32 plcmtcnt = 4;
+                int32 seq = 5;
+                repeated string assets = 6;
+                int32 context = 7;
+                int32 contextsubtype = 8;
+                int32 plcmttype = 9;
+                bool aurlsupport = 11;
+                bool durlsupport = 12;
+                repeated string eventtrackers = 13;
+                bool privacy = 14;
+                message Asset {
+                    oneof asset_oneof {
+                            BidRequest.SdkBidRequest.Imp.Native.NativeRequest.Asset.Title title = 3;
+                            BidRequest.SdkBidRequest.Imp.Native.NativeRequest.Asset.Image img = 4;
+                            BidRequest.SdkBidRequest.Imp.Video video = 5;
+                            BidRequest.SdkBidRequest.Imp.Native.NativeRequest.Asset.Data data = 6;
+                    }
+                    int32 id = 1;
+                    bool required = 2;
+                    message Data {
+                        int32 type = 1;
+                        int32 len = 2;
+                    }
+                    message Title {
+                        int32 len = 1;
+                    }
+                    message Image {
+                        int32 type = 1;
+                        int32 w = 2;
+                        int32 h = 3;
+                        int32 wmin = 4;
+                        int32 hmin = 5;
+                        repeated string mimes = 6;
+                    }
+                }
+                message EventTrackers {
+                    int32 event = 1;
+                    repeated int32 methods = 2;
+                }
+            }
+        }
+        message Video {
+            repeated string mimes = 1;
+            int32 linearity = 2;
+            int32 minduration = 3;
+            int32 maxduration = 4;
+            int32 protocol = 5;
+            int32 w = 6;
+            int32 h = 7;
+            int32 startdelay = 8;
+            int32 sequence = 9;
+            repeated int32 battr = 10;
+            int32 maxextended = 11;
+            int32 minbitrate = 12;
+            int32 maxbitrate = 13;
+            bool boxingallowed = 14;
+            repeated int32 playbackmethod = 15;
+            repeated int32 delivery = 16;
+            int32 pos = 17;
+            repeated string companionad = 18;
+            repeated int32 api = 19;
+            repeated int32 companiontype = 20;
+            repeated int32 protocols = 21;
+            bool skip = 23;
+            int32 skipmin = 24;
+            int32 skipafter = 25;
+            int32 placement = 26;
+            int32 playbackend = 27;
+            int32 maxseq = 28;
+            int32 poddur = 29;
+            string podid = 30;
+            int32 podseq = 31;
+            repeated int32 rqddurs = 32;
+            int32 slotinpod = 33;
+            double mincpmpersec = 34;
+        }
+        message Pmp {
+            bool private_auction = 1;
+            repeated string deals = 2;
+            message Deal {
+                string id = 1;
+                double bidfloor = 2;
+                string bidfloorcur = 3;
+                repeated string wseat = 4;
+                repeated string wadomain = 5;
+                int32 at = 6;
+            }
+        }
+        message Metric {
+            string type = 1;
+            double value = 2;
+            string vendor = 3;
+        }
+        message Banner {
+            int32 w = 1;
+            int32 h = 2;
+            string id = 3;
+            int32 pos = 4;
+            repeated int32 btype = 5;
+            repeated int32 battr = 6;
+            repeated string mimes = 7;
+            bool topframe = 8;
+            repeated int32 expdir = 9;
+            repeated int32 api = 10;
+            int32 wmax = 11;
+            int32 hmax = 12;
+            int32 wmin = 13;
+            int32 hmin = 14;
+            repeated string format = 15;
+            bool vcm = 16;
+            message Format {
+                int32 w = 1;
+                int32 h = 2;
+                int32 wratio = 3;
+                int32 hratio = 4;
+                int32 wmin = 5;
+            }
+        }
+        message Audio {
+            repeated string mimes = 1;
+            int32 minduration = 2;
+            int32 maxduration = 3;
+            repeated int32 protocols = 4;
+            int32 startdelay = 5;
+            int32 sequence = 6;
+            repeated int32 battr = 7;
+            int32 maxextended = 8;
+            int32 minbitrate = 9;
+            int32 maxbitrate = 10;
+            repeated int32 delivery = 11;
+            repeated string companionad = 12;
+            repeated int32 api = 13;
+            repeated int32 companiontype = 20;
+            int32 maxseq = 21;
+            int32 feed = 22;
+            bool stitched = 23;
+            int32 nvol = 24;
+            int32 poddur = 25;
+            repeated int32 rqddurs = 26;
+            string podid = 27;
+            int32 podseq = 28;
+            int32 slotinpod = 29;
+            double mincpmpersec = 30;
+        }
+    }
+    message User {
+        string id = 1;
+    }
+    message App {
+        string bundle = 1;
+        string ver = 2;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
